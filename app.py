@@ -32,3 +32,4 @@ if submitted:
     # Predict
     prediction = model.predict(X_scaled)[0]
     st.success(f"✅ Predicted Digit: **{prediction}**")
+
