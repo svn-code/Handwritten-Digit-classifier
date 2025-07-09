@@ -1,35 +1,66 @@
 import streamlit as st
 import numpy as np
 import joblib
+import cv2
+import matplotlib.pyplot as plt
+from PIL import Image
 
-# Load model and scaler
-model = joblib.load("best_svm_model.pkl")
-scaler = joblib.load("scaler.pkl")
-
+# Set Streamlit page config
 st.set_page_config(page_title="Digit Classifier", layout="centered")
 
-# App title
-st.title("🔢 Digit Classifier (0-9)")
-st.write("Enter 64 pixel values (0–16) for an 8x8 grayscale image to predict the digit.")
+# Load models
+models = {
+    "SVM": joblib.load("best_svm_model.pkl"),
+    "KNN": joblib.load("best_knn_model.pkl"),
+    "Decision Tree": joblib.load("best_decision_tree_model.pkl")
+}
 
-# Input form
-with st.form("digit_form"):
-    inputs = []
-    for i in range(8):
-        row = st.columns(8)
-        for j in range(8):
-            value = row[j].number_input(f"{8*i + j}", min_value=0.0, max_value=16.0, step=1.0, key=f"pixel_{8*i+j}")
-            inputs.append(value)
+# Load scaler
+scaler = joblib.load("scaler.pkl")
 
-    submitted = st.form_submit_button("Predict Digit")
+# Sidebar inputs
+st.sidebar.title("⚙️ Settings")
+model_choice = st.sidebar.selectbox("Choose Model", list(models.keys()))
+uploaded_file = st.sidebar.file_uploader("📤 Upload a digit image", type=["jpg", "jpeg", "png"])
 
-# Prediction
-if submitted:
-    # Reshape and scale input
-    X_input = np.array(inputs).reshape(1, -1)
+# Main title
+st.title("🔢 Digit Classifier")
+st.markdown(
+    "Upload a **handwritten digit image** (any size, grayscale or color) and let the classifier predict the number (0-9)."
+)
+
+# If file uploaded
+if uploaded_file:
+    image = Image.open(uploaded_file).convert("L")  # Convert to grayscale
+    img_array = np.array(image)
+
+    # Resize to 8x8
+    resized = cv2.resize(img_array, (8, 8), interpolation=cv2.INTER_AREA)
+
+    # Flatten & normalize to match digit dataset (0–16 scale)
+    flat = resized.flatten().astype(np.float64)
+    scaled_pixel = (flat / 255.0) * 16.0
+    X_input = scaled_pixel.reshape(1, -1)
+
+    # Scale using original scaler
     X_scaled = scaler.transform(X_input)
 
     # Predict
+    model = models[model_choice]
     prediction = model.predict(X_scaled)[0]
-    st.success(f"✅ Predicted Digit: **{prediction}**")
 
+    # Show results
+    st.subheader("🖼️ What the model sees (8×8 input image)")
+    fig, ax = plt.subplots()
+    ax.imshow(resized, cmap='gray')
+    ax.axis('off')
+    st.pyplot(fig)
+
+    # Show prediction
+    st.markdown("---")
+    st.markdown(f"<h2 style='text-align: center;'>🎯 Predicted Digit: <span style='color: green;'>{prediction}</span></h2>",
+                unsafe_allow_html=True)
+    st.success(f"Prediction made using **{model_choice}** model")
+
+else:
+    st.info("👈 Upload a digit image in the sidebar to begin.")
