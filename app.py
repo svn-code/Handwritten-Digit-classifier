@@ -45,12 +45,12 @@ if uploaded_file:
     resized = cv2.resize(img_array, (8, 8), interpolation=cv2.INTER_AREA)
 
     # Flatten & normalize to match digit dataset (0–16 scale)
-    flat = resized.flatten().astype(np.float64)
-    scaled_pixel = (flat / 255.0) * 16.0
-    X_input = scaled_pixel.reshape(1, -1)
+    #flat = resized.flatten().astype(np.float64)
+    #scaled_pixel = (flat / 255.0) * 16.0
+    #X_input = scaled_pixel.reshape(1, -1)
 
     # Scale using original scaler
-    X_scaled = scaler.transform(X_input)
+    X_scaled = scaler.transform(resized)
 
     # Predict
     model = models[model_choice]
